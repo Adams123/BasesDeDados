@@ -1,0 +1,121 @@
+AULA 8
+MER -> Relacional
+ 
+1º Passo: Como mapear CEs?
+CEs viram tabelas no Relacional. Atributos compostos são decompostos, unificados numa string ou postos em uma tabela separada (depende da necessidade de busca e quantidade de repetições).
+ 
+-----------------------
+ 
+2º Passo: Como mapear CEs fracas?
+A PK da entidade fraca serão a chave fraca da entidade + uma FK com a chave da entidade forte.
+ 
+-----------------------
+ 
+3º Passo: CRs com cardinalidade 1<->1
+ 
+Sem participação total:
+ 
+a) colocar a informação do relacionamento em um dos dois CEs do relacionamento (chamarei de CE1). Em CE1, você também precisa por uma FK para CE2. Para evitar problemas, essa FK deve ser chave secundária de CE1. A FK deve poder ser null para participações parciais. [Obs.: SGBD precisa permitir chave secundária nula] <saiba escolher seu CE1 para diminuir redundâncias, nulls, etc.>
+b) criar uma terceira tabela com uma FK de CE1 que vai ser PK, uma FK de CE2 que vai ser SK not-null e as informações do relacionamento. (+ tabelas = aumenta o tempo de consulta!)
+c) resolver restrição em aplicação (mais tempo de update e insert)
+ 
+Com participação total:
+Colocar FK no CE que tem participação total, e colocar FK como SK e not-null.
+ 
+Autorelacionamento:
+Precisa permitir SK null. Se não tiver SK, não garante 1:1.
+ 
+Mapeamento alternativo: caso de participação total dos dois lados
+Uma tabela para tudo. A PK será a chave de CE1, e a SK a chave de CE2.
+PROBLEMA: se precisar fazer uma FK para a chave de CE2, não vai dar (FKs vem apenas de PKs)
+ 
+Mapeamento alternativo: relacionamentos esparsos
+O melhor jeito é o método (b).
+ 
+-----------------------
+ 
+4º Passo: CRs com cardinalidade 1<->N
+Parcial: Ponha as informações do relacionamento no CE com cardinalidade 1.
+Por exemplo: Professor (1) -> (N) Disciplinas
+Disciplina = { Sigla[PK] ; Professor }
+                              |
+                              V
+             Professor = { Nome[PK] }
+ 
+Se for total pro lado do N (disciplina TEM QUE TER um professor), voce coloca a FK como not-null.
+Se for total pro lado do 1, não é possível garantir no relacionamento (resolva em aplicação).
+
+Mapeamento alternativo: relacionamento esparso
+Cria-se uma terceira tabela. O relacionamento 1 fornece a PK (por FK), enquanto o relacionamento N fornece um atributo not-null (por FK).
+Por exemplo: Aluno(N) - monitoram -> (1) Disciplina
+Disciplina = { Aluno[PK], Disciplina[not-null] }
+ 
+-----------------------
+ 
+5º Passo: CRs com cardinalidade N<->N
+Parcial: Vira uma terceira tabela. A PK da 3ª tabela serão FKs com as PKs das outras tabelas.
+Total: Impossível garantir, só em aplicação.
+ 
+-----------------------
+ 
+6º Passo: CRs com grau > 2
+Se é todo mundo N, cria uma tabela a mais.
+Se for 1:N:M, cria-se uma tabela a mais, mas a PK da tabela será as PKs dos relacionamentos M,N, e a PK do relacionamento 1 será apenas um atributo not-null.
+Caso haja autorrelacionamento: puxe as duas FKs do mesmo lugar. [obs.: impossível garantir no relacional que não haja autorrelacionamento com a mesma entidade]
+ 
+-----------------------
+ 
+7º Passo: Atributos multivalorados
+a) fazer uma tabela
+b) unificar em string (caso n necessite consulta)
+c) caso haja limite finito de valores e vai ter pouco null, faça vários atributos (at1, at2, at3) na tabela
+
+AULA 9
+MER-X -> Relacional: Agregação
+ 
+Caso 1: Mapear agregação identificada pelas chaves relacionadas + a própria chave
+N:N -> Crie uma tabela da agregação cuja PK são todas as PKs componentes.
+1:N -> Faça uma FK no relacionamento 1 pro relacionamento N. Crie uma tabela separada, com PK da agregação + a PK do relacionamento 1.
+1:1 -> Cria uma tabela da agregação com FK do CE1 e um FK do CE2. Transforme essa FK do CE2 em SK
+ 
+-------------------
+ 
+Caso 2: Mapear agregação identificada pela própria chave
+a) gerando apenas UMA agregação por relacionamento:
+Crie uma tabela para a agregação. A PK dessa tabela será a PK da agregação, as SKs serão as PKs dos relacionados.
+ 
+b) gerando MAIS de uma agregação por relacionamento:
+Crie uma tabela para a agregação. A PK dessa tabela será a PK da agregação, as PKs dos relacionados serão atributos not-null.
+ 
+-------------------
+ 
+Caso 3: pode-se identificar a agregação de dois jeitos (ou uma chave própria única ou por conjunto de chaves relacionadas)
+Coloque o identificador próprio único como PK e as chaves relacionadas como SK. Caso não vá ocorrer consulta nas SKs, não é necessário desperdiçar recursos fazendo SK -- deixe como atributo.
+ 
+-------------------
+ 
+Caso 4: mapear atributo do CR na agregação
+N:N -> Crie uma tabela do relacionamento e uma da agregação. Na tabela do relacionamento, crie FK vindo das PKs do relacionamento. Na agregação, as FKs são as PKs da tabela do relacionamento.
+1:N -> Mapeie o relacionamento 1:N gerando uma tabela a parte, com PK do CE1 e do CE2 como FKs. Deixe a FK do relacionamento N como PK e do relacionamento 1 como not null. Para a agregação, crie uma terceira tabela com a chave do B e a chave da agregação.
+
+AULA 10
+MER-X -> Relacional: Generalização
+ 
+Alternativa 1: Mapear o pai e os filhos em tabelas diferentes
+Pode ser usado para parcial ou total (não garante total).
+Pode ser usado para disjuntos e conjuntos (não garante disjunção).
+É bom para poucos filhos/filhos grandes/com consultas frequentes nos filhos/filhos com relacionamentos próprios.
+
+Se for disjunção (d): Crie uma tabela do pai com todos os seus atributos e coloque a PK do pai em todos os filhos como FK.
+Se for (o): Idem disjunção, mas não coloque atributo que identifica tipo no pai.
+OU você coloca os atributos compostos em cada filho.
+ 
+Alternativa 2: Mapear pai e filhos em uma única tabela
+Pode ser usado para parcial ou total (não garante total)
+Pode ser usado para disjuntos e conjuntos (não garante disjunção)
+Bom para filhos simples/possibilidade de 'surgirem' especializações não previstas/apenas o pai tem relacionamentos
+ 
+Alternativa 3: Mapear apenas os filhos
+Só pode ser usado para total (obviamente, garante total)
+Pode ser usado para disjuntos e conjuntos (não garante disjunção)
+Ruim para consultas no pai/em caso de conjunção, há redundância
